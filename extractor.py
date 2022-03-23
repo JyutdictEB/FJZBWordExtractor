@@ -3,11 +3,11 @@ import re
 
 wordWild = r"[~～～]"
 
-def loadRawCSV(path : str):
+def loadRawCSV(path : str,sep = ","):
   ret = []
   with open(path,encoding='utf-8',mode='r') as raw_file:
     for line in raw_file.readlines():
-      ret.append(line.strip().split(","))
+      ret.append(line.strip().split(sep))
   return ret
 
 def containWordWild(input : str):
@@ -45,25 +45,28 @@ def isCJK(char : str):
   cpr.append((0x30000,0x3134F))
   return any(cmp[0] <= utfcode <= cmp[1] for cmp in cpr)
 
+
+def traverseUntil(line:str,start_pos :int,direction : int,should_skip, len_limit = 3,):
+  cur_pos = start_pos
+  for i in (range(start_pos,len(line),1) if direction > 0 else range(start_pos,0,-1)):
+    char = line[i] 
+    cur_pos = i
+    if should_skip(char):
+      break
+    if(len_limit == 0):
+      break
+    len_limit -= 1
+  if should_skip(line[cur_pos]) and direction < 0:
+    cur_pos += 1
+  if cur_pos == len(line) - 1 and not should_skip(line[cur_pos]):
+    cur_pos += 1  # definetly would out of bound
+  return cur_pos
+
 # 寫切詞方法
+def traverseUntilNotCJK(line:str,start_pos :int,direction : int, len_limit = 3):
+  return traverseUntil(line,start_pos,direction,lambda char : not containWordWild(char) and not isCJK(char),len_limit)
+
 def splitWord(line:str):
-  def traverseUntilNotCJK(line:str,start_pos :int,direction : int, len_limit = 3):
-    cur_pos = start_pos
-    should_skip = lambda char : not containWordWild(char) and not isCJK(char)
-    for i in (range(start_pos,len(line),1) if direction > 0 else range(start_pos,0,-1)):
-      char = line[i] 
-      cur_pos = i
-      if should_skip(char):
-        break
-      if(len_limit == 0):
-        break
-      len_limit -= 1
-    if should_skip(line[cur_pos]) and direction < 0:
-      cur_pos += 1
-    if cur_pos == len(line) - 1 and not should_skip(line[cur_pos]):
-      cur_pos += 1  # definetly would out of bound
-    return cur_pos
-  
   ret = []
   if(type(line) != str):
     return ret
@@ -75,7 +78,20 @@ def splitWord(line:str):
     word = line[left_bound:right_bound]
     ret.append(word)
   return ret
-
+def splitWordHamdinVocab(line:str):
+  ret = []
+  if(type(line) != str):
+    return ret
+  pos = posWordInLine(line)
+  for eachPos in pos:
+    left_bound = right_bound = eachPos
+    left_bound = traverseUntil(
+        line, left_bound, -1, lambda char: char == '：', 50)
+    right_bound = traverseUntil(line, right_bound, 1, lambda char: not containWordWild(
+        char) and not (re.search("？，。！", char) is not None) and not isCJK(char), 50)
+    word = line[left_bound:right_bound]
+    ret.append(word)
+  return ret
 def demo():
   raw_data = loadRawCSV("faanjyutExport.csv")
   ele_with_words = locateWordLine(raw_data)
@@ -89,5 +105,3 @@ def demo():
     if(len(words_in_line) == 0):
       continue
     print(single_char,words_in_line)
-
-demo()
