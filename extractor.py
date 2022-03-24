@@ -78,6 +78,22 @@ def splitWord(line:str):
     word = line[left_bound:right_bound]
     ret.append(word)
   return ret
+def splitWordHamdinSinglezi(line : str):
+  ret = []
+  if(type(line) != str):
+    return ret
+  pos = posWordInLine(line)
+  for eachPos in pos:
+    if prev_r - prev_l > 0 and pos in range(prev_l,prev_r):
+      continue
+    left_bound = right_bound = eachPos
+    left_bound =  traverseUntil(
+        line, left_bound, -1, lambda char: re.match('[|（：]',char) is not None, -1)
+    right_bound = traverseUntilNotCJK(line,right_bound,1)
+    word = line[left_bound:right_bound]
+    ret.append(word)
+  return ret
+
 def splitWordHamdinVocab(line:str):
   ret = []
   if(type(line) != str):
@@ -86,9 +102,9 @@ def splitWordHamdinVocab(line:str):
   for eachPos in pos:
     left_bound = right_bound = eachPos
     left_bound = traverseUntil(
-        line, left_bound, -1, lambda char: char == '：', 50)
-    right_bound = traverseUntil(line, right_bound, 1, lambda char: not containWordWild(
-        char) and not (re.search("？，。！", char) is not None) and not isCJK(char), 50)
+        line, left_bound, -1, lambda char: re.match('[|：]',char) is not None, -1)
+    right_bound = traverseUntil(line, right_bound, 1, 
+        lambda char: re.search("[①②③；|（]", char) is not None,-1)
     word = line[left_bound:right_bound]
     ret.append(word)
   return ret
